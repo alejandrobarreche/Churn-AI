@@ -25,7 +25,7 @@ def setup_sql_magic():
     # Load SQL extension and configure
     ipython.run_line_magic('load_ext', 'sql')
     ipython.run_line_magic('sql', db_url)
-    ipython.run_line_magic('config', "SqlMagic.style = '_DEPRECATED_DEFAULT'")  # Note the quotes
+    ipython.run_line_magic('config', "SqlMagic.style = 'DEFAULT'")  # Note the quotes
 
 def setup_db_agent() -> PostgresAgent:
     # create helper class instance for accessing the database (inserts, updates, DDL, etc.)

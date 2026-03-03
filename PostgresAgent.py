@@ -142,6 +142,26 @@ class PostgresAgent:
                 self._engine.dispose()
                 self._engine = None
             raise e
+        
+    def append_to_postgres(self, df: pd.DataFrame, table_name: str) -> None:
+        """Append a pandas DataFrame to an existing PostgreSQL table."""
+        try:
+            engine = self._get_engine()
+            schema = table_name.split('.')[0] if '.' in table_name else None
+            table = table_name.split('.')[-1]
+            df.to_sql(
+                name=table,
+                schema=schema,
+                con=engine,
+                if_exists='append',
+                index=False,
+                method='multi'
+            )
+        except Exception as e:
+            if self._engine:
+                self._engine.dispose()
+                self._engine = None
+            raise e
 
     def close(self) -> None:
         """Close the database connection."""
