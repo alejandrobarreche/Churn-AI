@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 *.pyo
 .init-scripts/
+.DS_Store
