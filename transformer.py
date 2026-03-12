@@ -149,7 +149,8 @@ class ColumnDropper(BaseEstimator, TransformerMixin):
         # Sensibles
         'STATUS_SOCIAL', 'GENERO',
         # Resto
-        'ENCUESTA_CLIENTE_ZONA_TALLER', 'DAYS_LAST_SERVICE'
+        'ENCUESTA_CLIENTE_ZONA_TALLER', 'DAYS_LAST_SERVICE', 'Revisiones'
+
     ]
 
     def fit(self, X, y=None):
