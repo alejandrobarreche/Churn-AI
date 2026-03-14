@@ -6,3 +6,4 @@ __pycache__/
 *.pyo
 .init-scripts/
 .DS_Store
+Churn.zip
