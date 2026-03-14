@@ -6,7 +6,7 @@ import sys, importlib
 sys.path.insert(0, '.')
 from transformer import (BinaryEncoder, FrequencyEncoder, OrdinalExtensionEncoder,
                          OrdinalEquipamientoEncoder, NominalOneHotEncoder,
-                         PriceStandard, InstanceDropper, ColumnDropper)
+                         GastoRelativoEncoder, PriceStandard, InstanceDropper, ColumnDropper)
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 import streamlit as st
@@ -287,14 +287,15 @@ def load_and_compute():
 
     # Reconstruir pipeline en vez de cargar el pkl (incompatible con StringDtype)
     full_pipeline = Pipeline([
-        ('binary',           BinaryEncoder()),
-        ('frequency',        FrequencyEncoder()),
-        ('ordinal_ext',      OrdinalExtensionEncoder()),
-        ('ordinal_equip',    OrdinalEquipamientoEncoder()),
-        ('onehot',           NominalOneHotEncoder()),
-        ('price_standard',   PriceStandard()),
-        ('instance_dropper', InstanceDropper()),
-        ('dropper',          ColumnDropper()),
+        ('binary',            BinaryEncoder()),
+        ('frequency',         FrequencyEncoder()),
+        ('ordinal_ext',       OrdinalExtensionEncoder()),
+        ('ordinal_equip',     OrdinalEquipamientoEncoder()),
+        ('onehot',            NominalOneHotEncoder()),
+        ('gasto_relativo',    GastoRelativoEncoder()),
+        ('price_standard',    PriceStandard()),
+        #('instance_dropper',  InstanceDropper()),
+        ('dropper',           ColumnDropper()),
     ])
 
     # Re-fit con los mismos datos y split que en el notebook original
@@ -304,6 +305,14 @@ def load_and_compute():
             customer_data[col] = pd.to_datetime(customer_data[col], errors='coerce', dayfirst=True, format='%d/%m/%Y')
     for col in customer_data.select_dtypes(include=['string']).columns:
         customer_data[col] = customer_data[col].astype(object)
+
+    # Aplicar definición ghost (igual que en NB2 sección 2.5)
+    CUTOFF = pd.Timestamp('2023-12-31')
+    antiguedad_dias = (CUTOFF - customer_data['Sales_Date']).dt.days.clip(lower=0)
+    ghost_mask = (customer_data['Revisiones'] == 0) & (antiguedad_dias > 400)
+    customer_data['Churn_400'] = (
+        (customer_data['Churn_400'] == 'Y') | ghost_mask
+    ).map({True: 'Y', False: 'N'})
 
     train_set_raw, _ = train_test_split(customer_data, test_size=0.2, random_state=42)
     full_pipeline.fit(train_set_raw)

@@ -170,6 +170,23 @@ class ColumnDropper(BaseEstimator, TransformerMixin):
 
 
 
+class GastoRelativoEncoder(BaseEstimator, TransformerMixin):
+    """
+    Crea la feature 'gasto_relativo' = PVP / RENTA_MEDIA_ESTIMADA.
+    Mide el esfuerzo económico relativo del cliente para comprar el vehículo.
+    Debe ejecutarse ANTES de PriceStandard (PVP aún en euros).
+    clip(lower=1) evita división por cero antes de que InstanceDropper actúe.
+    """
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        X = X.copy()
+        X['gasto_relativo'] = X['PVP'] / X['RENTA_MEDIA_ESTIMADA'].clip(lower=1)
+        return X
+
+
 class PriceStandard(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
