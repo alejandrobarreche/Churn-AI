@@ -582,11 +582,12 @@ except Exception as e:
 
 
 # ═══════════════════════════════════════════════════════════════
-# SIDEBAR
+# SIDEBAR  (CHANGE 1)
 # ═══════════════════════════════════════════════════════════════
 with st.sidebar:
+    # Logo / brand
     st.markdown("""
-    <div style="text-align:center; padding: 15px 0 25px 0;">
+    <div style="text-align:center; padding: 15px 0 20px 0;">
         <span style="font-family: 'Orbitron', monospace; font-size: 1.6rem; font-weight: 800;
                      background: linear-gradient(90deg, #C8A951, #E8D5A0, #C8A951);
                      -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
@@ -600,19 +601,57 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    section_line()
+    # NAVEGACIÓN section header
+    st.markdown(f"""
+    <div style="margin: 4px 0 8px 0;">
+        <span style="font-family:'Orbitron',monospace; font-size:0.65rem; letter-spacing:3px;
+                     color:{UAX_GREY}; text-transform:uppercase;">NAVEGACIÓN</span>
+    </div>
+    <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(200,169,81,0.3),transparent); margin:8px 0 16px 0;"></div>
+    <div style="font-family:'Rajdhani',sans-serif; font-size:0.85rem; color:{UAX_GREY}; line-height:2;">
+        🏠 Resumen &nbsp;·&nbsp; 📈 CLTV &nbsp;·&nbsp; 🎯 Segmentación<br>
+        🔮 Proyección &nbsp;·&nbsp; 🔬 Modelos &nbsp;·&nbsp; 🧮 Predictor
+    </div>
+    <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(200,169,81,0.3),transparent); margin:16px 0;"></div>
+    """, unsafe_allow_html=True)
 
     if data_loaded:
-        st.markdown("### Filtros")
+        # FILTROS section header
+        st.markdown(f"""
+        <div style="margin: 8px 0 4px 0;">
+            <span style="font-family:'Orbitron',monospace; font-size:0.65rem; letter-spacing:3px;
+                         color:{UAX_GREY}; text-transform:uppercase;">FILTROS</span>
+        </div>
+        <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(200,169,81,0.3),transparent); margin:8px 0 12px 0;"></div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div style="font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:{UAX_GOLD};
+                    letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">
+            🚗 Modelo de vehículo
+        </div>
+        """, unsafe_allow_html=True)
         modelos_disponibles = sorted(df['Modelo_letra'].unique())
-        modelos_sel = st.multiselect("Modelo de vehículo", modelos_disponibles, default=modelos_disponibles)
+        modelos_sel = st.multiselect("Modelo de vehículo", modelos_disponibles, default=modelos_disponibles, label_visibility="collapsed")
 
-        riesgos_sel = st.multiselect("Nivel de riesgo", ['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO'], default=['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO'])
+        st.markdown(f"""
+        <div style="font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:{UAX_GOLD};
+                    letter-spacing:1px; text-transform:uppercase; margin-top:10px; margin-bottom:4px;">
+            ⚠️ Nivel de riesgo
+        </div>
+        """, unsafe_allow_html=True)
+        riesgos_sel = st.multiselect("Nivel de riesgo", ['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO'], default=['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO'], label_visibility="collapsed")
 
+        st.markdown(f"""
+        <div style="font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:{UAX_GOLD};
+                    letter-spacing:1px; text-transform:uppercase; margin-top:10px; margin-bottom:4px;">
+            💰 Rango PVP (€)
+        </div>
+        """, unsafe_allow_html=True)
         pvp_range = st.slider("Rango PVP (€)", int(df['PVP_original'].min()), int(df['PVP_original'].max()),
-                              (int(df['PVP_original'].min()), int(df['PVP_original'].max())))
+                              (int(df['PVP_original'].min()), int(df['PVP_original'].max())), label_visibility="collapsed")
 
-        # Filter — se calcula aquí y es accesible fuera del bloque with (Python no crea scope nuevo)
+        # Filter — se calcula aquí y es accesible fuera del bloque with
         mask = (
                 df['Modelo_letra'].isin(modelos_sel) &
                 df['riesgo'].isin(riesgos_sel) &
@@ -620,7 +659,25 @@ with st.sidebar:
         )
         dff = df[mask].copy()
 
-        section_line()
+        # DATASET section
+        st.markdown(f"""
+        <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(200,169,81,0.3),transparent); margin:16px 0;"></div>
+        <div style="margin: 8px 0 4px 0;">
+            <span style="font-family:'Orbitron',monospace; font-size:0.65rem; letter-spacing:3px;
+                         color:{UAX_GREY}; text-transform:uppercase;">DATASET</span>
+        </div>
+        <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(200,169,81,0.3),transparent); margin:8px 0 12px 0;"></div>
+        <div style="font-family:'Rajdhani',sans-serif; font-size:0.85rem; color:{UAX_TEXT}; line-height:2.0;">
+            <span style="color:{UAX_GREY};">Total clientes:</span>
+            <span style="color:{UAX_GOLD}; font-weight:600;"> {len(df):,}</span><br>
+            <span style="color:{UAX_GREY};">P(churn) media:</span>
+            <span style="color:{UAX_GOLD}; font-weight:600;"> {df['p_churn'].mean():.2%}</span><br>
+            <span style="color:{UAX_GREY};">CLTV medio:</span>
+            <span style="color:{UAX_GOLD}; font-weight:600;"> {df['CLTV'].mean():,.0f}€</span>
+        </div>
+        <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(200,169,81,0.3),transparent); margin:16px 0;"></div>
+        """, unsafe_allow_html=True)
+
         st.markdown(f"""
         <div style="text-align:center; padding:10px;">
             <span style="font-family:'Orbitron'; font-size:1.8rem; color:{UAX_GOLD};">{len(dff):,}</span><br>
@@ -650,12 +707,11 @@ st.markdown("""
 
 section_line()
 
-# ─── TABS ──────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+# ─── TABS (CHANGE 4 — 6 tabs instead of 7) ─────────────────────
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🏠 Resumen",
     "📈 CLTV Analysis",
-    "🎯 Segmentación",
-    "⚡ Acciones Comerciales",
+    "🎯 Segmentación & Acciones",
     "🔮 Proyección Revisiones",
     "🔬 Modelos",
     "🧮 Predictor de Churn",
@@ -663,7 +719,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 1: RESUMEN
+# TAB 1: RESUMEN  (CHANGE 2)
 # ═══════════════════════════════════════════════════════════════
 with tab1:
     st.markdown("## Resumen Ejecutivo")
@@ -695,81 +751,105 @@ with tab1:
     st.markdown("<br>", unsafe_allow_html=True)
     section_line()
 
-    # Project description
-    st.markdown("## Sobre este Proyecto")
+    # ── A) Pipeline visual diagram — columnas nativas Streamlit ──
+    st.markdown("## Pipeline del Proyecto")
 
-    col_desc1, col_desc2 = st.columns(2)
+    _pipe_steps = [
+        ("📊", "DATOS",        "customer_data\nnuevos_clientes\ncostes.csv",    False),
+        ("🔧", "PIPELINE ML",  "Encoders\nEstandarización\nSklearn Pipeline",   False),
+        ("🤖", "MODELO",       f"XGBoost ★\nAUC-ROC 0.83\nRF · LightGBM",     True),
+        ("📐", "THRESHOLD",    f"Óptimo: {BEST_THRESHOLD:.2f}\nF-beta\nNegocio-driven", False),
+        ("💰", "CLTV",         "10 revisiones\nMargen 62%\nSupervivencia",      False),
+        ("🎯", "ACCIONES",     "5 segmentos\nReglas negocio\nROI estimado",     False),
+    ]
+    # Intercalamos columnas de paso (6) y flechas (5) → 11 columnas, anchos alternados
+    _col_widths = []
+    for i in range(len(_pipe_steps)):
+        _col_widths.append(2)        # paso
+        if i < len(_pipe_steps) - 1:
+            _col_widths.append(0.3)  # flecha
 
-    with col_desc1:
-        st.markdown(f"""
-        <div class="info-box">
-            <div class="info-box-title">El Problema</div>
-            <div class="info-box-text">
-                Un concesionario de vehículos eléctricos e híbridos necesita anticiparse a la fuga de clientes
-                (churn) antes de que ocurra. Perder un cliente supone no solo la pérdida inmediata de ingresos
-                por revisiones, sino también el abandono del vínculo a 10 años vista que representa el CLTV.
-                <br><br>
-                El objetivo es identificar qué clientes tienen mayor probabilidad de no volver a hacer
-                una revisión en el concesionario, y actuar antes de que se vayan.
+    _pipe_cols = st.columns(_col_widths)
+    _col_idx = 0
+    for i, (icon, label, desc, highlight) in enumerate(_pipe_steps):
+        border = f"2px solid {UAX_GOLD}" if highlight else "1px solid rgba(200,169,81,0.25)"
+        bg     = f"linear-gradient(145deg,{UAX_NAVY},{UAX_CARD2})" if highlight else f"linear-gradient(145deg,{UAX_CARD},{UAX_CARD2})"
+        with _pipe_cols[_col_idx]:
+            st.markdown(f"""
+            <div style="background:{bg}; border:{border}; border-radius:10px;
+                        padding:14px 8px 12px 8px; text-align:center;">
+              <div style="font-size:1.6rem;">{icon}</div>
+              <div style="font-family:'Orbitron',monospace; font-size:0.65rem; color:{UAX_GOLD};
+                          letter-spacing:2px; margin:6px 0 4px;">{label}</div>
+              <div style="font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:{UAX_GREY};
+                          line-height:1.5;">{'<br>'.join(desc.split(chr(10)))}</div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+        _col_idx += 1
+        if i < len(_pipe_steps) - 1:
+            with _pipe_cols[_col_idx]:
+                st.markdown(f"""
+                <div style="text-align:center; padding-top:38px;
+                            font-size:1.4rem; color:{UAX_GOLD};">→</div>
+                """, unsafe_allow_html=True)
+            _col_idx += 1
 
-        st.markdown(f"""
-        <div class="info-box">
-            <div class="info-box-title">Los Datos</div>
-            <div class="info-box-text">
-                <b>customer_data.csv</b> — histórico de clientes con variables de vehículo (modelo, PVP, kW,
-                combustible), contrato (garantía, financiación, seguro batería), geografía (zona, provincia)
-                y comportamiento (días desde última revisión, quejas, encuestas).
-                <br><br>
-                <b>nuevos_clientes.csv</b> — cartera actual sobre la que se aplican las predicciones
-                y se priorizan las acciones comerciales.
-                <br><br>
-                <b>costes.csv</b> — coste medio de mantenimiento por modelo, base del cálculo CLTV.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    section_line()
 
-    with col_desc2:
-        st.markdown(f"""
-        <div class="info-box">
-            <div class="info-box-title">La Metodología</div>
-            <div class="info-box-text">
-                <b>1. Preparación de datos</b> — limpieza, codificación de variables categóricas (binaria,
-                frecuencia, ordinal, one-hot) y estandarización de precios mediante un pipeline de
-                Scikit-learn reproducible.
-                <br><br>
-                <b>2. Modelado</b> — se compararon Regresión Logística, Árbol de Decisión, Random Forest
-                y <b>XGBoost</b>. El mejor modelo fue XGBoost con un AUC-ROC de <b>0.83</b>.
-                <br><br>
-                <b>3. Threshold óptimo</b> — se ajustó el umbral de clasificación a <b>{BEST_THRESHOLD:.2f}</b>
-                maximizando la métrica de negocio (F-beta), priorizando la detección de churners reales.
-                <br><br>
-                <b>4. CLTV</b> — se proyecta el valor futuro de cada cliente a 10 revisiones usando
-                una tasa de supervivencia basada en su probabilidad de churn individual.
-                <br><br>
-                <b>5. Acciones</b> — reglas de negocio que asignan la acción óptima según la combinación
-                de riesgo de churn y valor CLTV, con estimación de ROI esperado.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    # ── B) Model comparison cards ───────────────────────────────
+    st.markdown("## Comparación de Modelos")
 
-        st.markdown(f"""
-        <div class="info-box">
-            <div class="info-box-title">Cómo Usar el Dashboard</div>
-            <div class="info-box-text">
-                Usa los <b>filtros del sidebar</b> para segmentar la cartera por modelo, nivel de riesgo
-                y rango de PVP. Los KPIs y gráficos se actualizan en tiempo real.<br><br>
-                La pestaña <b>Predictor de Churn</b> permite introducir los datos de un cliente nuevo
-                y obtener su probabilidad de fuga instantáneamente.
+    _model_display = [
+        ('XGBoost', True),
+        ('Random Forest', False),
+        ('LightGBM', False),
+    ]
+    mod_cols = st.columns(3)
+    for col_idx, (mname, is_best) in enumerate(_model_display):
+        with mod_cols[col_idx]:
+            if model_metrics and mname in model_metrics:
+                mm = model_metrics[mname]
+                auc_val  = f"{mm['auc']:.4f}"
+                prec_val = f"{mm['precision']:.4f}"
+                rec_val  = f"{mm['recall']:.4f}"
+                f1_val   = f"{mm['f1']:.4f}"
+            else:
+                auc_val  = "0.83" if mname == "XGBoost" else ("0.81" if mname == "Random Forest" else "0.80")
+                prec_val = "—"
+                rec_val  = "—"
+                f1_val   = "—"
+
+            badge = f'<span style="background:{UAX_GOLD}; color:{UAX_BG}; font-family:Orbitron,monospace; font-size:0.6rem; padding:3px 8px; border-radius:20px; letter-spacing:1px;">MODELO SELECCIONADO</span>' if is_best else ''
+            border_style = f"2px solid {UAX_GOLD}" if is_best else "1px solid rgba(200,169,81,0.2)"
+            st.markdown(f"""
+            <div style="background:linear-gradient(145deg,{UAX_CARD},{UAX_CARD2}); border:{border_style};
+                        border-radius:12px; padding:20px 16px; text-align:center; position:relative;">
+                <div style="margin-bottom:8px;">{badge}</div>
+                <div style="font-family:'Orbitron',monospace; font-size:1rem; color:{UAX_GOLD}; margin:8px 0 14px; letter-spacing:1px;">{mname}</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div style="background:rgba(200,169,81,0.06); border-radius:8px; padding:10px 6px;">
+                        <div style="font-family:'Rajdhani'; font-size:0.72rem; color:{UAX_GREY}; letter-spacing:1px; text-transform:uppercase;">AUC-ROC</div>
+                        <div style="font-family:'Orbitron'; font-size:1.1rem; color:{UAX_TEXT}; margin-top:4px;">{auc_val}</div>
+                    </div>
+                    <div style="background:rgba(200,169,81,0.06); border-radius:8px; padding:10px 6px;">
+                        <div style="font-family:'Rajdhani'; font-size:0.72rem; color:{UAX_GREY}; letter-spacing:1px; text-transform:uppercase;">Precision</div>
+                        <div style="font-family:'Orbitron'; font-size:1.1rem; color:{UAX_TEXT}; margin-top:4px;">{prec_val}</div>
+                    </div>
+                    <div style="background:rgba(200,169,81,0.06); border-radius:8px; padding:10px 6px;">
+                        <div style="font-family:'Rajdhani'; font-size:0.72rem; color:{UAX_GREY}; letter-spacing:1px; text-transform:uppercase;">Recall</div>
+                        <div style="font-family:'Orbitron'; font-size:1.1rem; color:{UAX_TEXT}; margin-top:4px;">{rec_val}</div>
+                    </div>
+                    <div style="background:rgba(200,169,81,0.06); border-radius:8px; padding:10px 6px;">
+                        <div style="font-family:'Rajdhani'; font-size:0.72rem; color:{UAX_GREY}; letter-spacing:1px; text-transform:uppercase;">F1</div>
+                        <div style="font-family:'Orbitron'; font-size:1.1rem; color:{UAX_TEXT}; margin-top:4px;">{f1_val}</div>
+                    </div>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 2: CLTV ANALYSIS
+# TAB 2: CLTV ANALYSIS  (CHANGE 3)
 # ═══════════════════════════════════════════════════════════════
 with tab2:
     st.markdown("## Análisis del Customer Lifetime Value")
@@ -808,9 +888,125 @@ with tab2:
     plotly_layout(fig, height=500)
     st.plotly_chart(fig, width='stretch')
 
+    # ── Per-client analysis ─────────────────────────────────────
+    section_line()
+    st.markdown("## Análisis Individual de Cliente")
+
+    if len(dff) > 0:
+        RIESGO_COLORS_CLTV = {
+            'MUY_BAJO': UAX_GREEN,
+            'BAJO':     '#80D080',
+            'MEDIO':    UAX_GOLD,
+            'ALTO':     UAX_RED,
+            'MUY_ALTO': '#FF4444',
+        }
+
+        cliente_cltv_sel = st.selectbox(
+            "Selecciona cliente (CODE)",
+            sorted(dff['CODE'].unique()),
+            key="cltv_cliente_sel"
+        )
+        cliente_row = dff[dff['CODE'] == cliente_cltv_sel].iloc[0]
+
+        cl_col1, cl_col2 = st.columns(2)
+
+        with cl_col1:
+            pchurn_pct = float(cliente_row['p_churn']) * 100
+            riesgo_color_gauge = RIESGO_COLORS_CLTV.get(str(cliente_row['riesgo']), UAX_GOLD)
+            fig_g = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=pchurn_pct,
+                number={'suffix': '%', 'font': {'family': 'Orbitron', 'color': UAX_GOLD, 'size': 32}},
+                title={'text': "P(Churn)", 'font': {'family': 'Orbitron', 'color': UAX_TEXT, 'size': 13}},
+                gauge={
+                    'axis': {'range': [0, 100], 'tickcolor': UAX_GREY,
+                             'tickfont': {'family': 'Rajdhani', 'color': UAX_GREY}},
+                    'bar': {'color': riesgo_color_gauge, 'thickness': 0.25},
+                    'bgcolor': UAX_CARD2,
+                    'borderwidth': 1,
+                    'bordercolor': UAX_GREY,
+                    'steps': [
+                        {'range': [0, 20],  'color': 'rgba(39,174,96,0.15)'},
+                        {'range': [20, 40], 'color': 'rgba(200,169,81,0.12)'},
+                        {'range': [40, 60], 'color': 'rgba(200,169,81,0.20)'},
+                        {'range': [60, 80], 'color': 'rgba(192,57,43,0.15)'},
+                        {'range': [80, 100],'color': 'rgba(192,57,43,0.25)'},
+                    ],
+                }
+            ))
+            fig_g.update_layout(
+                paper_bgcolor=UAX_CARD,
+                font=dict(family='Rajdhani', color=UAX_TEXT),
+                height=300,
+                margin=dict(l=20, r=20, t=50, b=10),
+            )
+            st.plotly_chart(fig_g, width='stretch')
+
+        with cl_col2:
+            cltv_fmt = f"{float(cliente_row['CLTV']):,.0f}€"
+            pchurn_fmt = f"{float(cliente_row['p_churn']):.2%}"
+            pvp_fmt = f"{float(cliente_row['PVP_original']):,.0f}€"
+            st.markdown(f"""
+            <div style="background:linear-gradient(145deg,{UAX_CARD},{UAX_CARD2}); border:1px solid rgba(200,169,81,0.25);
+                        border-radius:12px; padding:22px 20px; margin-top:10px;">
+                <div style="font-family:'Orbitron',monospace; color:{UAX_GOLD}; font-size:0.85rem; letter-spacing:2px; margin-bottom:14px;">
+                    FICHA DE CLIENTE
+                </div>
+                <table style="width:100%; font-family:'Rajdhani',sans-serif; font-size:0.95rem; border-collapse:collapse;">
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">CODE</td>
+                        <td style="color:{UAX_TEXT}; font-weight:600; text-align:right;">{cliente_row['CODE']}</td></tr>
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">Modelo</td>
+                        <td style="color:{UAX_TEXT}; font-weight:600; text-align:right;">{cliente_row['Modelo_letra']}</td></tr>
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">CLTV</td>
+                        <td style="color:{UAX_GOLD}; font-weight:600; text-align:right;">{cltv_fmt}</td></tr>
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">P(Churn)</td>
+                        <td style="color:{UAX_TEXT}; font-weight:600; text-align:right;">{pchurn_fmt}</td></tr>
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">Riesgo</td>
+                        <td style="color:{RIESGO_COLORS_CLTV.get(str(cliente_row['riesgo']), UAX_GOLD)}; font-weight:700; text-align:right;">{cliente_row['riesgo']}</td></tr>
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">Acción</td>
+                        <td style="color:{UAX_TEXT}; font-weight:600; text-align:right;">{cliente_row['accion']}</td></tr>
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">PVP original</td>
+                        <td style="color:{UAX_TEXT}; font-weight:600; text-align:right;">{pvp_fmt}</td></tr>
+                    <tr><td style="color:{UAX_GREY}; padding:4px 0;">Zona</td>
+                        <td style="color:{UAX_TEXT}; font-weight:600; text-align:right;">{cliente_row['ZONA_original']}</td></tr>
+                </table>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Scatter with selected client highlighted
+        fig_sel = go.Figure()
+        for seg in ['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO']:
+            sub = dff[dff['riesgo'] == seg]
+            fig_sel.add_trace(go.Scatter(
+                x=sub['p_churn'], y=sub['CLTV'],
+                mode='markers',
+                name=seg,
+                marker=dict(size=6, color=RIESGO_COLORS_CLTV[seg], opacity=0.55),
+                hovertemplate='<b>%{text}</b><br>P(Churn): %{x:.2%}<br>CLTV: %{y:,.0f}€<extra></extra>',
+                text=sub['CODE'].astype(str),
+            ))
+        fig_sel.add_trace(go.Scatter(
+            x=[float(cliente_row['p_churn'])],
+            y=[float(cliente_row['CLTV'])],
+            mode='markers',
+            name='Cliente seleccionado',
+            marker=dict(size=18, color=UAX_GOLD, symbol='star',
+                        line=dict(color='#FFFFFF', width=2)),
+            hovertemplate=f'<b>{cliente_cltv_sel}</b><br>P(Churn): {float(cliente_row["p_churn"]):.2%}<br>CLTV: {float(cliente_row["CLTV"]):,.0f}€<extra></extra>',
+        ))
+        fig_sel.update_layout(
+            title="Posición del cliente en la cartera (P(Churn) vs CLTV)",
+            xaxis_title="P(Churn)",
+            yaxis_title="CLTV (€)",
+            xaxis=dict(tickformat='.0%'),
+            yaxis=dict(tickformat=",.0f"),
+        )
+        plotly_layout(fig_sel, height=450)
+        st.plotly_chart(fig_sel, width='stretch')
+
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 3: SEGMENTATION
+# TAB 3: SEGMENTACIÓN & ACCIONES  (CHANGE 4 — merged tab)
 # ═══════════════════════════════════════════════════════════════
 with tab3:
     st.markdown("## Matriz de Segmentación: Riesgo × Valor")
@@ -864,11 +1060,8 @@ with tab3:
     plotly_layout(fig, height=450)
     st.plotly_chart(fig, width='stretch')
 
-
-# ═══════════════════════════════════════════════════════════════
-# TAB 4: ACCIONES COMERCIALES + ROI
-# ═══════════════════════════════════════════════════════════════
-with tab4:
+    # ── ACCIONES COMERCIALES (merged from old tab4) ─────────────
+    section_line()
     st.markdown("## Acciones Comerciales")
 
     resumen = dff.groupby('accion').agg(
@@ -904,26 +1097,115 @@ with tab4:
         plotly_layout(fig, height=400)
         st.plotly_chart(fig, width='stretch')
 
-    # Action rules table
+    # ── Visual segment cards replacing plain dataframe ──────────
     st.markdown("### Reglas de negocio")
-    rules = pd.DataFrame({
-        'Riesgo': ['MUY_ALTO', 'MUY_ALTO', 'ALTO', 'ALTO', 'MEDIO', 'MEDIO',
-                   'BAJO/MUY_BAJO', 'BAJO/MUY_BAJO', 'BAJO/MUY_BAJO'],
-        'Valor': ['Alto/Medio', 'Bajo', 'Alto/Medio', 'Bajo', 'Alto/Medio', 'Bajo',
-                  'Alto', 'Medio', 'Bajo'],
-        'Acción': ['Contacto prioritario', 'Contacto mínimo',
-                   'Pack Premium VIP', 'Contacto mínimo',
-                   'Pack Intermedio', 'Seguimiento estándar',
-                   'Upselling', 'Mantenimiento', 'Sin acción'],
-        'Servicios': ['Bono 20€', 'Email',
-                      'Recogida+lavado+neumáticos+bono 50€', 'Email',
-                      'Regalo+lavado+bono 30€', 'Recordatorio',
-                      'Ext. garantía / seguro batería', 'Comunicación periódica', '—'],
-        'Coste/respondedor': ['20€', '0€', '150€', '0€', '66€', '0€', '0€', '0€', '0€'],
-        'TR': ['10%', '10%', '80%', '80%', '55%', '55%', '45/40%', '45/40%', '45/40%'],
-        'Δ churn': ['−15%', '−5%', '−40%', '−5%', '−20%', '−5%', '−10%', '−5%', '0%'],
-    })
-    st.dataframe(rules, width='stretch', hide_index=True)
+
+    RIESGO_CARD_COLORS = {
+        'MUY_ALTO': '#ef4444',
+        'ALTO':     '#f97316',
+        'MEDIO':    '#f59e0b',
+        'BAJO':     '#22c55e',
+        'MUY_BAJO': '#10b981',
+    }
+    RIESGO_ICONS = {
+        'MUY_ALTO': '🔴',
+        'ALTO':     '🟠',
+        'MEDIO':    '🟡',
+        'BAJO':     '🟢',
+        'MUY_BAJO': '✅',
+    }
+    # Rules data per riesgo level
+    RIESGO_RULES = {
+        'MUY_ALTO': {
+            'tr': '10%', 'delta_churn': '−15% / −5%', 'coste_resp': '20€ / 0€',
+            'acciones': [
+                ('Alto/Medio CLTV', 'Contacto prioritario', 'Bono 20€'),
+                ('Bajo CLTV',       'Contacto mínimo',      'Email de seguimiento'),
+            ],
+        },
+        'ALTO': {
+            'tr': '80%', 'delta_churn': '−40% / −5%', 'coste_resp': '150€ / 0€',
+            'acciones': [
+                ('Alto/Medio CLTV', 'Pack Premium VIP', 'Recogida + lavado + neumáticos + bono 50€'),
+                ('Bajo CLTV',       'Contacto mínimo',  'Email de seguimiento'),
+            ],
+        },
+        'MEDIO': {
+            'tr': '55%', 'delta_churn': '−20% / −5%', 'coste_resp': '66€ / 0€',
+            'acciones': [
+                ('Alto/Medio CLTV', 'Pack Intermedio',      'Regalo + lavado + bono 30€'),
+                ('Bajo CLTV',       'Seguimiento estándar', 'Recordatorio de revisión'),
+            ],
+        },
+        'BAJO': {
+            'tr': '45%', 'delta_churn': '−10% / −5% / 0%', 'coste_resp': '0€',
+            'acciones': [
+                ('Alto CLTV',  'Upselling',    'Ext. garantía / seguro batería'),
+                ('Medio CLTV', 'Mantenimiento','Comunicación periódica'),
+                ('Bajo CLTV',  'Sin acción',   '—'),
+            ],
+        },
+        'MUY_BAJO': {
+            'tr': '40%', 'delta_churn': '−10% / −5% / 0%', 'coste_resp': '0€',
+            'acciones': [
+                ('Alto CLTV',  'Upselling',    'Ext. garantía / seguro batería'),
+                ('Medio CLTV', 'Mantenimiento','Comunicación periódica'),
+                ('Bajo CLTV',  'Sin acción',   '—'),
+            ],
+        },
+    }
+
+    for riesgo_key in ['MUY_ALTO', 'ALTO', 'MEDIO', 'BAJO', 'MUY_BAJO']:
+        rcolor = RIESGO_CARD_COLORS[riesgo_key]
+        ricon  = RIESGO_ICONS[riesgo_key]
+        rdata  = RIESGO_RULES[riesgo_key]
+        with st.expander(f"{ricon} {riesgo_key}", expanded=False):
+            exp_col1, exp_col2 = st.columns(2)
+            with exp_col1:
+                rows_html = ""
+                for cltv_lvl, accion_name, servicios in rdata['acciones']:
+                    rows_html += f"""
+                    <tr>
+                        <td style="color:{UAX_GREY}; padding:5px 8px; font-size:0.88rem;">{cltv_lvl}</td>
+                        <td style="color:{UAX_TEXT}; padding:5px 8px; font-weight:600; font-size:0.88rem;">{accion_name}</td>
+                        <td style="color:{UAX_GREY}; padding:5px 8px; font-size:0.82rem;">{servicios}</td>
+                    </tr>"""
+                st.markdown(f"""
+                <div style="margin-bottom:8px;">
+                    <span style="font-family:'Rajdhani',sans-serif; font-size:0.8rem; color:{rcolor};
+                                 text-transform:uppercase; letter-spacing:1px; font-weight:600;">
+                        Acciones por CLTV
+                    </span>
+                </div>
+                <table style="width:100%; font-family:'Rajdhani',sans-serif; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="color:{UAX_GREY}; font-size:0.75rem; text-align:left; padding:4px 8px; border-bottom:1px solid rgba(200,169,81,0.15);">CLTV</th>
+                            <th style="color:{UAX_GREY}; font-size:0.75rem; text-align:left; padding:4px 8px; border-bottom:1px solid rgba(200,169,81,0.15);">Acción</th>
+                            <th style="color:{UAX_GREY}; font-size:0.75rem; text-align:left; padding:4px 8px; border-bottom:1px solid rgba(200,169,81,0.15);">Servicios</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows_html}</tbody>
+                </table>
+                """, unsafe_allow_html=True)
+            with exp_col2:
+                st.markdown(f"""
+                <div style="background:rgba({int(rcolor[1:3],16)},{int(rcolor[3:5],16)},{int(rcolor[5:7],16)},0.08);
+                            border:1px solid {rcolor}40; border-radius:10px; padding:16px 18px;">
+                    <div style="font-family:'Rajdhani',sans-serif; font-size:0.8rem; color:{rcolor};
+                                text-transform:uppercase; letter-spacing:1px; font-weight:600; margin-bottom:12px;">
+                        Parámetros económicos
+                    </div>
+                    <div style="font-family:'Rajdhani',sans-serif; font-size:0.95rem; color:{UAX_TEXT}; line-height:2.2;">
+                        <span style="color:{UAX_GREY};">Tasa de respuesta:</span>
+                        <span style="color:{UAX_GOLD}; font-weight:600;"> {rdata['tr']}</span><br>
+                        <span style="color:{UAX_GREY};">Δ churn estimado:</span>
+                        <span style="color:{UAX_GOLD}; font-weight:600;"> {rdata['delta_churn']}</span><br>
+                        <span style="color:{UAX_GREY};">Coste/respondedor:</span>
+                        <span style="color:{UAX_GOLD}; font-weight:600;"> {rdata['coste_resp']}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
     section_line()
     st.markdown("## Simulación Económica — ROI")
@@ -975,7 +1257,6 @@ with tab4:
     roi_global = total_neto / total_inversion if total_inversion > 0 else 0
     pct_mejora = total_ganancia / total_cltv_sin * 100 if total_cltv_sin > 0 else 0
 
-    # KPI cards — contexto de cartera
     kc1, kc2, kc3, kc4 = st.columns(4)
     with kc1:
         st.markdown(metric_card("CLTV Cartera", f"{total_cltv_sin/1e6:.2f}M€", "sin acciones"), unsafe_allow_html=True)
@@ -988,7 +1269,6 @@ with tab4:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Waterfall solo con la parte incremental (escala legible)
     col_wf, col_bar = st.columns([3, 2])
 
     with col_wf:
@@ -1014,7 +1294,6 @@ with tab4:
         st.plotly_chart(fig, width='stretch')
 
     with col_bar:
-        # Comparativa antes/después por segmento de acción (solo los que tienen inversión)
         sim_inv = sim[sim['inversion'] > 0].copy()
         sim_inv['roi_label'] = sim_inv['beneficio_neto'].apply(lambda v: f"{v:,.0f}€")
         colors_sim = [UAX_GREEN if v > 0 else UAX_RED for v in sim_inv['beneficio_neto']]
@@ -1044,22 +1323,17 @@ with tab4:
 
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 5: REVISION PROJECTION
+# TAB 4: PROYECCIÓN REVISIONES  (CHANGE 5 — formerly tab5)
 # ═══════════════════════════════════════════════════════════════
-with tab5:
+with tab4:
     st.markdown("## Proyección de Revisiones Futuras")
 
-    modelos_rev = st.multiselect("Modelos a visualizar", sorted(df_rev['Modelo'].unique()),
-                                 default=sorted(df_rev['Modelo'].unique())[:6],
-                                 key="rev_modelos")
-
-    df_rev_f = df_rev[df_rev['Modelo'].isin(modelos_rev)]
-
-    col_colors = {m: c for m, c in zip(sorted(df_rev['Modelo'].unique()),
-                                       px.colors.sample_colorscale('Viridis', np.linspace(0.15, 0.95, len(df_rev['Modelo'].unique()))))}
+    # Auto-select all models (no multiselect)
+    modelos_rev_all = sorted(df_rev['Modelo'].unique())
+    df_rev_f = df_rev[df_rev['Modelo'].isin(modelos_rev_all)]
 
     fig = go.Figure()
-    for modelo in modelos_rev:
+    for modelo in modelos_rev_all:
         subset = df_rev_f[df_rev_f['Modelo'] == modelo]
         fig.add_trace(go.Scatter(
             x=subset['Revisión'], y=subset['Beneficio neto'],
@@ -1097,11 +1371,87 @@ with tab5:
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Formula explanation ──────────────────────────────────────
+    section_line()
+    st.markdown("### ¿Cómo funciona la proyección?")
+
+    st.markdown(f"""
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin: 16px 0;">
+        <div style="flex:1; min-width:260px; background:linear-gradient(145deg,{UAX_CARD},{UAX_CARD2});
+                    border:1px solid rgba(200,169,81,0.25); border-radius:12px; padding:20px 22px;">
+            <div style="font-family:'Orbitron',monospace; color:{UAX_GOLD}; font-size:0.75rem;
+                        letter-spacing:2px; text-transform:uppercase; margin-bottom:12px;">
+                Ingresos por revisión
+            </div>
+            <div style="font-family:'Rajdhani',sans-serif; font-size:1.3rem; color:{UAX_TEXT}; margin-bottom:8px;">
+                <span style="color:{UAX_GOLD};">C(n)</span> = BASE × (1 + α)<sup>n</sup>
+            </div>
+            <div style="font-family:'Rajdhani',sans-serif; font-size:0.88rem; color:{UAX_GREY}; line-height:1.7;">
+                BASE = coste medio de mantenimiento por modelo<br>
+                α = tasa de crecimiento (7% modelos A/B, 10% resto)<br>
+                n = número de revisión (1 → 10)
+            </div>
+        </div>
+        <div style="flex:1; min-width:260px; background:linear-gradient(145deg,{UAX_CARD},{UAX_CARD2});
+                    border:1px solid rgba(200,169,81,0.25); border-radius:12px; padding:20px 22px;">
+            <div style="font-family:'Orbitron',monospace; color:{UAX_GOLD}; font-size:0.75rem;
+                        letter-spacing:2px; text-transform:uppercase; margin-bottom:12px;">
+                CLTV acumulado
+            </div>
+            <div style="font-family:'Rajdhani',sans-serif; font-size:1.3rem; color:{UAX_TEXT}; margin-bottom:8px;">
+                <span style="color:{UAX_GOLD};">CLTV</span> = Σ C(n) × 0.62 × (1−p)<sup>n</sup>
+            </div>
+            <div style="font-family:'Rajdhani',sans-serif; font-size:0.88rem; color:{UAX_GREY}; line-height:1.7;">
+                0.62 = margen neto sobre ingresos<br>
+                p = probabilidad de churn individual<br>
+                (1−p)<sup>n</sup> = probabilidad de supervivencia
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Sensitivity analysis chart ───────────────────────────────
+    st.markdown("### Sensibilidad del CLTV según riesgo de churn")
+
+    _costes_dict_rev = costes.set_index('Modelo')['Mantenimiento_medio'].to_dict()
+    _base_rev = _costes_dict_rev.get('A', 300)
+    _alpha_rev = 0.07
+    _MARGEN_REV = 0.62
+    _p_values = [0.1, 0.3, 0.5, 0.7, 0.9]
+    _p_labels = ['p=0.1 (muy bajo)', 'p=0.3 (bajo)', 'p=0.5 (medio)', 'p=0.7 (alto)', 'p=0.9 (muy alto)']
+    _p_colors = [UAX_GREEN, '#80D080', UAX_GOLD, UAX_RED, '#FF4444']
+    _revisiones = list(range(1, 11))
+
+    fig_sens = go.Figure()
+    for p_val, p_label, p_color in zip(_p_values, _p_labels, _p_colors):
+        cltv_acum = []
+        running = 0
+        for n in _revisiones:
+            ingreso = _base_rev * (1 + _alpha_rev) ** n
+            running += ingreso * _MARGEN_REV * (1 - p_val) ** n
+            cltv_acum.append(running)
+        fig_sens.add_trace(go.Scatter(
+            x=_revisiones, y=cltv_acum,
+            mode='lines+markers',
+            name=p_label,
+            line=dict(color=p_color, width=2.5),
+            marker=dict(size=7, color=p_color),
+        ))
+    fig_sens.update_layout(
+        title="Sensibilidad del CLTV según riesgo de churn (Modelo A, α=7%)",
+        xaxis_title="Nº de revisiones",
+        yaxis_title="CLTV acumulado (€)",
+        xaxis=dict(dtick=1),
+        yaxis=dict(tickformat=",.0f"),
+    )
+    plotly_layout(fig_sens, height=450)
+    st.plotly_chart(fig_sens, width='stretch')
+
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 6: COMPARACIÓN DE MODELOS
+# TAB 5: COMPARACIÓN DE MODELOS  (formerly tab6)
 # ═══════════════════════════════════════════════════════════════
-with tab6:
+with tab5:
     st.markdown("## Comparación de Modelos")
 
     if not model_metrics:
@@ -1224,10 +1574,17 @@ with tab6:
 
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 7: PREDICTOR DE CHURN
+# TAB 6: PREDICTOR DE CHURN  (CHANGE 6 — formerly tab7)
 # ═══════════════════════════════════════════════════════════════
-with tab7:
+with tab6:
     st.markdown("## Predictor Individual de Churn")
+
+    st.info(
+        "Los campos numéricos no tienen restricciones de rango — puedes introducir valores extremos "
+        "para ver cómo responde el modelo. Los valores por defecto corresponden a la mediana del "
+        "conjunto de entrenamiento."
+    )
+
     st.markdown(f"""
     <div class="info-box">
         <div class="info-box-text">
@@ -1248,8 +1605,8 @@ with tab7:
             st.markdown(f"<div style='font-family:Orbitron; color:{UAX_GOLD}; font-size:0.85rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:12px;'>Vehículo</div>", unsafe_allow_html=True)
 
             modelo_input = st.selectbox("Modelo *", ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'])
-            pvp_input = st.number_input("PVP (€) *", min_value=10528, max_value=37970, value=22000, step=500)
-            kw_input = st.number_input("Potencia (kW) *", min_value=48, max_value=193, value=100, step=5)
+            pvp_input = st.number_input("PVP (€) *", value=22000, step=500)
+            kw_input = st.number_input("Potencia (kW) *", value=100, step=5)
             fuel_input = st.selectbox("Combustible *", ['ELÉCTRICO', 'HÍBRIDO'])
             trans_input = st.selectbox("Transmisión *", ['A', 'M'])
             carroceria_input = st.selectbox("Tipo carrocería *", ['TIPO1', 'TIPO2', 'TIPO3', 'TIPO4', 'TIPO5', 'TIPO6', 'TIPO7', 'TIPO8'])
@@ -1270,8 +1627,8 @@ with tab7:
         with col_cli:
             st.markdown(f"<div style='font-family:Orbitron; color:{UAX_GOLD}; font-size:0.85rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:12px;'>Cliente y Geografía</div>", unsafe_allow_html=True)
 
-            edad_input = st.number_input("Edad *", min_value=20, max_value=78, value=40, step=1)
-            renta_input = st.number_input("Renta media estimada (€) *", min_value=0, max_value=37777, value=18000, step=500)
+            edad_input = st.number_input("Edad *", value=40, step=1)
+            renta_input = st.number_input("Renta media estimada (€) *", value=18000, step=500)
             zona_input = st.selectbox("Zona *", ['CENTRO', 'ESTE', 'NORTE', 'SUR'])
             prov_input = st.selectbox("Provincia *", ['BARCELONA', 'BILBAO', 'LA CORUÑA', 'MADRID', 'MALAGA', 'SEVILLA', 'VALENCIA'])
             origen_input = st.selectbox("Origen *", ['Internet', 'Tienda'])
