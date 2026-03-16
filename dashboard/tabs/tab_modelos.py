@@ -21,8 +21,11 @@ def _fig_roc(model_metrics):
             mode='lines',
             line=dict(width=2.5, color=MODEL_COLORS.get(mn, UAX_GOLD)),
         ))
-    fig.update_layout(xaxis_title="Tasa de Falsos Positivos",
-                      yaxis_title="Tasa de Verdaderos Positivos")
+    fig.update_layout(
+        title="Curvas ROC — Comparación de modelos",
+        xaxis_title="Tasa de Falsos Positivos (1 − Especificidad)",
+        yaxis_title="Tasa de Verdaderos Positivos (Sensibilidad)",
+    )
     plotly_layout(fig, height=420)
     return fig
 
@@ -39,20 +42,35 @@ def _comparison_rows(model_metrics):
 
 @st.cache_data(hash_funcs={dict: id})
 def _fig_confusion(model_metrics, sel_model):
-    """Matriz de confusión — cambia con el modelo seleccionado."""
+    """Matriz de confusión — cambia con el modelo seleccionado.
+
+    sklearn almacena cm[0]=No Churn (clase 0), cm[1]=Churn (clase 1).
+    Mostramos Churn arriba (clase positiva) invirtiendo el orden de filas.
+    """
     cm = model_metrics[sel_model]['cm']
+    # Churn (clase positiva) arriba → invertir filas
+    z = [list(cm[1]), list(cm[0])]
+    cell_labels = [
+        [f"VN\n{cm[0][0]:,}", f"FP\n{cm[0][1]:,}"],   # fila Real No Churn
+        [f"FN\n{cm[1][0]:,}", f"VP\n{cm[1][1]:,}"],   # fila Real Churn
+    ]
     fig = go.Figure(go.Heatmap(
-        z=cm,
-        x=['Pred No Churn', 'Pred Churn'],
-        y=['Real No Churn', 'Real Churn'],
-        text=[[str(v) for v in row] for row in cm],
+        z=z,
+        x=['Predicho: No Churn', 'Predicho: Churn'],
+        y=['Real: No Churn', 'Real: Churn'],
+        text=cell_labels,
         texttemplate="%{text}",
-        textfont=dict(size=20, color=UAX_TEXT),
+        textfont=dict(size=16, family='Orbitron', color=UAX_TEXT),
         colorscale=[[0, UAX_CARD], [1, UAX_GOLD]],
         showscale=False,
     ))
-    plotly_layout(fig, height=320)
-    fig.update_layout(xaxis=dict(side='bottom'), margin=dict(l=40, r=20, t=40, b=40))
+    plotly_layout(fig, height=340)
+    fig.update_layout(
+        title="Matriz de Confusión",
+        xaxis=dict(side='bottom', title='Predicción del modelo'),
+        yaxis=dict(title='Valor real', autorange='reversed'),
+        margin=dict(l=40, r=20, t=60, b=40),
+    )
     return fig
 
 
@@ -67,7 +85,11 @@ def _fig_feat_importance(model_metrics, sel_model):
         x=fi_series.values, y=fi_series.index,
         orientation='h', marker_color=UAX_GOLD, opacity=0.85,
     ))
-    fig.update_layout(xaxis_title="Importancia")
+    fig.update_layout(
+        title="Variables más influyentes (Top 10)",
+        xaxis_title="Importancia relativa",
+        yaxis_title="Variable",
+    )
     plotly_layout(fig, height=380)
     return fig
 
@@ -80,7 +102,12 @@ def _fig_proba_dist(model_metrics, sel_model):
         x=model_metrics[sel_model]['proba'],
         nbinsx=40, marker_color=UAX_GOLD, opacity=0.75, name=sel_model,
     ))
-    fig.update_layout(xaxis_title="P(Churn)", yaxis_title="Frecuencia", bargap=0.05)
+    fig.update_layout(
+        title="Distribución de probabilidades de churn",
+        xaxis_title="P(Churn) — probabilidad predicha",
+        yaxis_title="Nº de clientes",
+        bargap=0.05,
+    )
     plotly_layout(fig, height=380)
     return fig
 
