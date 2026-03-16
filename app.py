@@ -18,6 +18,8 @@ from plotly.subplots import make_subplots
 import joblib
 import traceback
 import os
+from sklearn.metrics import (roc_curve, auc, precision_score, recall_score,
+                              f1_score, confusion_matrix)
 pd.options.future.infer_string = False
 
 # ═══════════════════════════════════════════════════════════════
@@ -406,9 +408,20 @@ def load_and_compute():
     df['CLTV'] = df.apply(calc_cltv, axis=1)
 
     # --- Segmentation ---
-    df['riesgo'] = pd.qcut(df['p_churn'], q=3, labels=['Bajo', 'Medio', 'Alto'])
+    df['riesgo'] = pd.qcut(df['p_churn'], q=5, labels=['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO'])
     df['valor'] = pd.qcut(df['CLTV'], q=3, labels=['Bajo', 'Medio', 'Alto'])
     df['segmento'] = df['riesgo'].astype(str) + ' riesgo / ' + df['valor'].astype(str) + ' valor'
+
+    # --- Tasa de respuesta y coste de contacto ---
+    TASA_RESPUESTA = {
+        'MUY_ALTO': 0.10, 'ALTO': 0.80, 'MEDIO': 0.55, 'BAJO': 0.45, 'MUY_BAJO': 0.40,
+    }
+    COSTE_CONTACTO = {
+        'MUY_ALTO': 0.20, 'ALTO': 0.10, 'MEDIO': 0.50, 'BAJO': 0.50, 'MUY_BAJO': 0.20,
+    }
+    # .astype(float) necesario: riesgo es Categorical (pd.qcut) y .map() hereda ese dtype
+    df['tasa_respuesta'] = df['riesgo'].map(TASA_RESPUESTA).astype(float)
+    df['coste_contacto']  = df['riesgo'].map(COSTE_CONTACTO).astype(float)
 
     # --- Revenue per revision 1 ---
     def coste_rev_n(modelo, n):
@@ -418,39 +431,48 @@ def load_and_compute():
 
     df['ingreso_rev1'] = df['Modelo_letra'].apply(lambda m: coste_rev_n(m, 1))
 
-    # --- Actions ---
+    # --- Actions (5 risk levels, fixed service package costs) ---
     def asignar_accion(row):
-        r, v, rev1 = row['riesgo'], row['valor'], row['ingreso_rev1']
-        if r == 'Alto' and v == 'Alto':
-            return 'Retención agresiva', rev1 + rev1 * 0.15, 'Revisión gratuita + 15% dto'
-        elif r == 'Alto' and v == 'Medio':
-            return 'Retención proactiva', rev1 * 0.10, '10% dto en próxima revisión'
-        elif r == 'Alto' and v == 'Bajo':
-            return 'Contacto mínimo', 0, 'Email de seguimiento'
-        elif r == 'Medio' and v == 'Alto':
-            return 'Fidelización premium', rev1 * 0.05, 'Pack mant. con 5% dto'
-        elif r == 'Medio' and v == 'Medio':
-            return 'Incentivo moderado', rev1 * 0.05, '5% dto en revisión'
-        elif r == 'Medio' and v == 'Bajo':
-            return 'Seguimiento estándar', 0, 'Recordatorio de revisión'
-        elif r == 'Bajo' and v == 'Alto':
-            return 'Upselling', 0, 'Oferta ext. garantía'
-        elif r == 'Bajo' and v == 'Medio':
-            return 'Mantenimiento', 0, 'Comunicación periódica'
-        else:
-            return 'Sin acción', 0, '—'
+        r, v = row['riesgo'], row['valor']
+        if r == 'MUY_ALTO':
+            if v in ['Alto', 'Medio']:
+                return 'Contacto prioritario', 0, 20, 'Bono 20€'
+            else:
+                return 'Contacto mínimo', 0, 0, 'Email de seguimiento'
+        elif r == 'ALTO':
+            if v in ['Alto', 'Medio']:
+                return 'Pack Premium VIP', 100, 50, 'Recogida + lavado + neumáticos + bono 50€'
+            else:
+                return 'Contacto mínimo', 0, 0, 'Email de seguimiento'
+        elif r == 'MEDIO':
+            if v in ['Alto', 'Medio']:
+                return 'Pack Intermedio', 36, 30, 'Regalo + lavado + bono 30€'
+            else:
+                return 'Seguimiento estándar', 0, 0, 'Recordatorio de revisión'
+        else:  # BAJO o MUY_BAJO
+            if v == 'Alto':
+                return 'Upselling', 0, 0, 'Oferta ext. garantía / seguro batería'
+            elif v == 'Medio':
+                return 'Mantenimiento', 0, 0, 'Comunicación periódica'
+            else:
+                return 'Sin acción', 0, 0, '—'
 
     acciones = df.apply(asignar_accion, axis=1, result_type='expand')
-    df['accion'] = acciones[0]
-    df['coste_accion'] = acciones[1]
-    df['descripcion_accion'] = acciones[2]
+    df['accion']             = acciones[0]
+    df['coste_adicional']    = acciones[1]
+    df['coste_descuento']    = acciones[2]
+    df['descripcion_accion'] = acciones[3]
 
     # --- ROI simulation ---
     REDUCCION = {
-        'Retención agresiva': 0.50, 'Retención proactiva': 0.30,
-        'Fidelización premium': 0.20, 'Incentivo moderado': 0.15,
-        'Upselling': 0.10, 'Seguimiento estándar': 0.05,
-        'Contacto mínimo': 0.05, 'Mantenimiento': 0.05, 'Sin acción': 0.00,
+        'Pack Premium VIP':      0.40,
+        'Pack Intermedio':       0.20,
+        'Contacto prioritario':  0.15,
+        'Upselling':             0.10,
+        'Seguimiento estándar':  0.05,
+        'Contacto mínimo':       0.05,
+        'Mantenimiento':         0.05,
+        'Sin acción':            0.00,
     }
 
     def cltv_post(row):
@@ -468,9 +490,69 @@ def load_and_compute():
         return cltv
 
     df['CLTV_con_accion'] = df.apply(cltv_post, axis=1)
-    df['ganancia_cltv'] = df['CLTV_con_accion'] - df['CLTV']
+    df['ganancia_cltv_respondedor'] = df['CLTV_con_accion'] - df['CLTV']
+
+    # 4-component cost breakdown (A5)
+    COSTE_MARKETING_PCT = 0.01
+    df['coste_efectivo_contacto']  = df['coste_contacto']
+    df['coste_efectivo_adicional'] = df['coste_adicional'] * df['tasa_respuesta']
+    df['coste_efectivo_descuento'] = df['coste_descuento'] * df['tasa_respuesta']
+    df['coste_efectivo_marketing'] = df['ingreso_rev1'] * COSTE_MARKETING_PCT * df['tasa_respuesta']
+    df['coste_accion'] = (
+        df['coste_efectivo_contacto']
+        + df['coste_efectivo_adicional']
+        + df['coste_efectivo_descuento']
+        + df['coste_efectivo_marketing']
+    )
+    # TR-weighted gain and ROI
+    df['ganancia_cltv'] = df['ganancia_cltv_respondedor'] * df['tasa_respuesta']
     df['ROI'] = np.where(df['coste_accion'] > 0,
                          (df['ganancia_cltv'] - df['coste_accion']) / df['coste_accion'], np.nan)
+
+    # --- Model comparison metrics ---
+    rf_model  = joblib.load('data/warehouse/random_forest.pkl')
+    lgb_model = joblib.load('data/warehouse/lightgbm.pkl')
+
+    # Apply ghost to test_set and extract y_test before transformation
+    test_eval = test_set.copy()
+    if 'Sales_Date' in test_eval.columns:
+        test_eval['Sales_Date'] = pd.to_datetime(test_eval['Sales_Date'], errors='coerce')
+        ant_test = (CUTOFF - test_eval['Sales_Date']).dt.days.clip(lower=0)
+        ghost_test = (test_eval['Revisiones'] == 0) & (ant_test > 400)
+        test_eval['Churn_400'] = ((test_eval['Churn_400'] == 'Y') | ghost_test).map({True: 'Y', False: 'N'})
+    for col in test_eval.columns:
+        if pd.api.types.is_string_dtype(test_eval[col]):
+            test_eval[col] = test_eval[col].astype(object)
+
+    test_prepared = full_pipeline.fit_transform(test_eval)
+    if 'Churn_400' in test_prepared.columns:
+        y_test = test_prepared['Churn_400'].values.astype(int)
+        X_test_m = test_prepared.drop(columns=['Churn_400'])
+    else:
+        y_test = None
+        X_test_m = test_prepared
+
+    model_metrics = {}
+    if y_test is not None:
+        for mname, mobj in [('XGBoost', xgboost_model), ('Random Forest', rf_model), ('LightGBM', lgb_model)]:
+            proba = mobj.predict_proba(X_test_m)[:, 1]
+            pred  = (proba >= BEST_THRESHOLD).astype(int)
+            fpr, tpr, _ = roc_curve(y_test, proba)
+            model_metrics[mname] = {
+                'proba':     proba,
+                'auc':       float(auc(fpr, tpr)),
+                'precision': float(precision_score(y_test, pred, zero_division=0)),
+                'recall':    float(recall_score(y_test, pred, zero_division=0)),
+                'f1':        float(f1_score(y_test, pred, zero_division=0)),
+                'cm':        confusion_matrix(y_test, pred),
+                'fpr':       fpr,
+                'tpr':       tpr,
+            }
+        # feature importances (use XGBoost feature names as reference)
+        feat_names = list(X_test_m.columns)
+        for mname, mobj in [('XGBoost', xgboost_model), ('Random Forest', rf_model), ('LightGBM', lgb_model)]:
+            imp = mobj.feature_importances_
+            model_metrics[mname]['feat_imp'] = dict(zip(feat_names, imp))
 
     # --- Revision table ---
     modelos_unicos = sorted(df['Modelo_letra'].unique())
@@ -485,14 +567,14 @@ def load_and_compute():
                              'Beneficio neto': round(ingreso * MARGEN_NETO, 2)})
     df_rev = pd.DataFrame(rev_rows)
 
-    return df, costes, df_rev, BEST_THRESHOLD, full_pipeline, xgboost_model, train_medianas
+    return df, costes, df_rev, BEST_THRESHOLD, full_pipeline, xgboost_model, train_medianas, model_metrics
 
 
 # ═══════════════════════════════════════════════════════════════
 # LOAD DATA
 # ═══════════════════════════════════════════════════════════════
 try:
-    df, costes, df_rev, BEST_THRESHOLD, full_pipeline, xgboost_model, train_medianas = load_and_compute()
+    df, costes, df_rev, BEST_THRESHOLD, full_pipeline, xgboost_model, train_medianas, model_metrics = load_and_compute()
     data_loaded = True
 except Exception as e:
     data_loaded = False
@@ -525,7 +607,7 @@ with st.sidebar:
         modelos_disponibles = sorted(df['Modelo_letra'].unique())
         modelos_sel = st.multiselect("Modelo de vehículo", modelos_disponibles, default=modelos_disponibles)
 
-        riesgos_sel = st.multiselect("Nivel de riesgo", ['Bajo', 'Medio', 'Alto'], default=['Bajo', 'Medio', 'Alto'])
+        riesgos_sel = st.multiselect("Nivel de riesgo", ['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO'], default=['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO'])
 
         pvp_range = st.slider("Rango PVP (€)", int(df['PVP_original'].min()), int(df['PVP_original'].max()),
                               (int(df['PVP_original'].min()), int(df['PVP_original'].max())))
@@ -569,12 +651,13 @@ st.markdown("""
 section_line()
 
 # ─── TABS ──────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🏠 Resumen",
     "📈 CLTV Analysis",
     "🎯 Segmentación",
     "⚡ Acciones Comerciales",
     "🔮 Proyección Revisiones",
+    "🔬 Modelos",
     "🧮 Predictor de Churn",
 ])
 
@@ -601,9 +684,12 @@ with tab1:
         st.markdown(metric_card("Inversión", f"{inv:,.0f}€",
                                 f"{(dff['coste_accion']>0).sum()} acciones activas"), unsafe_allow_html=True)
     with c5:
-        benef = dff['ganancia_cltv'].sum() - dff['coste_accion'].sum()
-        st.markdown(metric_card("Beneficio Neto", f"{benef:,.0f}€",
-                                f"ROI: {dff.loc[dff['coste_accion']>0,'ROI'].mean():.1f}x" if (dff['coste_accion']>0).any() else "—"),
+        _inv = dff['coste_accion'].sum()
+        _gan = dff['ganancia_cltv'].sum()
+        _neto = _gan - _inv
+        _roi = _neto / _inv if _inv > 0 else 0
+        st.markdown(metric_card("Beneficio Neto", f"{_neto:,.0f}€",
+                                f"ROI campaña: {_roi:.1f}x" if _inv > 0 else "—"),
                     unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -731,7 +817,7 @@ with tab3:
 
     col1, col2 = st.columns(2)
 
-    riesgo_order = ['Alto', 'Medio', 'Bajo']
+    riesgo_order = ['MUY_ALTO', 'ALTO', 'MEDIO', 'BAJO', 'MUY_BAJO']
     valor_order = ['Bajo', 'Medio', 'Alto']
 
     with col1:
@@ -821,18 +907,21 @@ with tab4:
     # Action rules table
     st.markdown("### Reglas de negocio")
     rules = pd.DataFrame({
-        'Segmento': ['Alto riesgo / Alto valor', 'Alto riesgo / Medio valor',
-                     'Alto riesgo / Bajo valor', 'Medio riesgo / Alto valor',
-                     'Medio riesgo / Medio valor', 'Medio riesgo / Bajo valor',
-                     'Bajo riesgo / Alto valor', 'Bajo riesgo / Medio valor',
-                     'Bajo riesgo / Bajo valor'],
-        'Acción': ['Retención agresiva', 'Retención proactiva', 'Contacto mínimo',
-                   'Fidelización premium', 'Incentivo moderado', 'Seguimiento estándar',
+        'Riesgo': ['MUY_ALTO', 'MUY_ALTO', 'ALTO', 'ALTO', 'MEDIO', 'MEDIO',
+                   'BAJO/MUY_BAJO', 'BAJO/MUY_BAJO', 'BAJO/MUY_BAJO'],
+        'Valor': ['Alto/Medio', 'Bajo', 'Alto/Medio', 'Bajo', 'Alto/Medio', 'Bajo',
+                  'Alto', 'Medio', 'Bajo'],
+        'Acción': ['Contacto prioritario', 'Contacto mínimo',
+                   'Pack Premium VIP', 'Contacto mínimo',
+                   'Pack Intermedio', 'Seguimiento estándar',
                    'Upselling', 'Mantenimiento', 'Sin acción'],
-        'Descripción': ['Revisión gratuita + 15% dto', '10% dto en próxima revisión',
-                        'Email de seguimiento', 'Pack mant. con 5% dto', '5% dto en revisión',
-                        'Recordatorio de revisión', 'Oferta ext. garantía', 'Comunicación periódica', '—'],
-        'Reducción churn': ['−50%', '−30%', '−5%', '−20%', '−15%', '−5%', '−10%', '−5%', '0%'],
+        'Servicios': ['Bono 20€', 'Email',
+                      'Recogida+lavado+neumáticos+bono 50€', 'Email',
+                      'Regalo+lavado+bono 30€', 'Recordatorio',
+                      'Ext. garantía / seguro batería', 'Comunicación periódica', '—'],
+        'Coste/respondedor': ['20€', '0€', '150€', '0€', '66€', '0€', '0€', '0€', '0€'],
+        'TR': ['10%', '10%', '80%', '80%', '55%', '55%', '45/40%', '45/40%', '45/40%'],
+        'Δ churn': ['−15%', '−5%', '−40%', '−5%', '−20%', '−5%', '−10%', '−5%', '0%'],
     })
     st.dataframe(rules, width='stretch', hide_index=True)
 
@@ -1010,9 +1099,134 @@ with tab5:
 
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 6: PREDICTOR DE CHURN
+# TAB 6: COMPARACIÓN DE MODELOS
 # ═══════════════════════════════════════════════════════════════
 with tab6:
+    st.markdown("## Comparación de Modelos")
+
+    if not model_metrics:
+        st.warning("No hay métricas de modelos disponibles. Verifica que los archivos .pkl estén en data/warehouse/.")
+    else:
+        MODEL_COLORS = {'XGBoost': UAX_GOLD, 'Random Forest': UAX_GREEN, 'LightGBM': '#6EC6FF'}
+
+        # ── Selector de modelo + 4 KPI cards ──────────────────
+        sel_model = st.selectbox("Modelo a inspeccionar", list(model_metrics.keys()), key="mod_sel")
+        m = model_metrics[sel_model]
+
+        mk1, mk2, mk3, mk4 = st.columns(4)
+        with mk1:
+            st.markdown(metric_card("AUC-ROC", f"{m['auc']:.4f}"), unsafe_allow_html=True)
+        with mk2:
+            st.markdown(metric_card("Precision", f"{m['precision']:.4f}"), unsafe_allow_html=True)
+        with mk3:
+            st.markdown(metric_card("Recall", f"{m['recall']:.4f}"), unsafe_allow_html=True)
+        with mk4:
+            st.markdown(metric_card("F1-Score", f"{m['f1']:.4f}"), unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        section_line()
+
+        # ── Confusion matrix + comparison table ───────────────
+        col_cm, col_tbl = st.columns([1, 1])
+
+        with col_cm:
+            st.markdown(f"### Matriz de Confusión — {sel_model}")
+            cm = m['cm']
+            fig_cm = go.Figure(go.Heatmap(
+                z=cm,
+                x=['Pred No Churn', 'Pred Churn'],
+                y=['Real No Churn', 'Real Churn'],
+                text=[[str(v) for v in row] for row in cm],
+                texttemplate="%{text}",
+                textfont=dict(size=20, color=UAX_TEXT),
+                colorscale=[[0, UAX_CARD], [1, UAX_GOLD]],
+                showscale=False,
+            ))
+            plotly_layout(fig_cm, height=320)
+            fig_cm.update_layout(
+                xaxis=dict(side='bottom'),
+                margin=dict(l=40, r=20, t=40, b=40),
+            )
+            st.plotly_chart(fig_cm, width='stretch')
+
+        with col_tbl:
+            st.markdown("### Tabla Comparativa")
+            rows = []
+            for mn, mm in model_metrics.items():
+                rows.append({
+                    'Modelo': mn,
+                    'AUC':       f"{mm['auc']:.4f}",
+                    'Precision': f"{mm['precision']:.4f}",
+                    'Recall':    f"{mm['recall']:.4f}",
+                    'F1':        f"{mm['f1']:.4f}",
+                })
+            st.dataframe(pd.DataFrame(rows).set_index('Modelo'), width='stretch')
+
+        section_line()
+
+        # ── ROC curves (all 3 models) ──────────────────────────
+        st.markdown("### Curvas ROC")
+        fig_roc = go.Figure()
+        fig_roc.add_shape(type='line', x0=0, y0=0, x1=1, y1=1,
+                          line=dict(dash='dash', color=UAX_GREY, width=1))
+        for mn, mm in model_metrics.items():
+            fig_roc.add_trace(go.Scatter(
+                x=mm['fpr'], y=mm['tpr'],
+                name=f"{mn} (AUC={mm['auc']:.3f})",
+                mode='lines',
+                line=dict(width=2.5, color=MODEL_COLORS.get(mn, UAX_GOLD)),
+            ))
+        fig_roc.update_layout(
+            xaxis_title="Tasa de Falsos Positivos",
+            yaxis_title="Tasa de Verdaderos Positivos",
+        )
+        plotly_layout(fig_roc, height=420)
+        st.plotly_chart(fig_roc, width='stretch')
+
+        section_line()
+
+        # ── Feature importance + bimodal distribution ──────────
+        col_fi, col_dist = st.columns([1, 1])
+
+        with col_fi:
+            st.markdown(f"### Feature Importance — {sel_model}")
+            fi = m.get('feat_imp', {})
+            if fi:
+                fi_series = pd.Series(fi).sort_values(ascending=True).tail(10)
+                fig_fi = go.Figure(go.Bar(
+                    x=fi_series.values,
+                    y=fi_series.index,
+                    orientation='h',
+                    marker_color=UAX_GOLD,
+                    opacity=0.85,
+                ))
+                fig_fi.update_layout(xaxis_title="Importancia")
+                plotly_layout(fig_fi, height=380)
+                st.plotly_chart(fig_fi, width='stretch')
+
+        with col_dist:
+            st.markdown(f"### Distribución de Probabilidades — {sel_model}")
+            fig_hist = go.Figure()
+            fig_hist.add_trace(go.Histogram(
+                x=m['proba'],
+                nbinsx=40,
+                marker_color=UAX_GOLD,
+                opacity=0.75,
+                name=sel_model,
+            ))
+            fig_hist.update_layout(
+                xaxis_title="P(Churn)",
+                yaxis_title="Frecuencia",
+                bargap=0.05,
+            )
+            plotly_layout(fig_hist, height=380)
+            st.plotly_chart(fig_hist, width='stretch')
+
+
+# ═══════════════════════════════════════════════════════════════
+# TAB 7: PREDICTOR DE CHURN
+# ═══════════════════════════════════════════════════════════════
+with tab7:
     st.markdown("## Predictor Individual de Churn")
     st.markdown(f"""
     <div class="info-box">
@@ -1159,17 +1373,25 @@ with tab6:
 
             # Clasificación de riesgo
             if prob < 0.15:
+                nivel = "MUY BAJO RIESGO"
+                nivel_color = UAX_GREEN
+                accion_msg = "Cliente muy estable. Candidato ideal para upselling o pack 5 revisiones con bono 2º vehículo."
+            elif prob < 0.28:
                 nivel = "BAJO RIESGO"
                 nivel_color = UAX_GREEN
-                accion_msg = "Cliente estable. Considera acciones de upselling o fidelización premium."
-            elif prob < 0.35:
+                accion_msg = "Cliente estable. Considera upselling (ext. garantía / seguro batería) o mantenimiento periódico."
+            elif prob < 0.42:
                 nivel = "RIESGO MEDIO"
                 nivel_color = UAX_GOLD
-                accion_msg = "Atención proactiva recomendada. Oferta de mantenimiento con descuento moderado."
-            else:
+                accion_msg = "Atención proactiva. Pack Intermedio: regalo + lavado + bono 30€ (TR 55%)."
+            elif prob < 0.60:
                 nivel = "ALTO RIESGO"
                 nivel_color = UAX_RED
-                accion_msg = "Acción urgente: retención agresiva. Revisión gratuita o descuento significativo."
+                accion_msg = "Acción prioritaria. Pack Premium VIP: recogida + lavado + neumáticos + bono 50€ (TR 80%)."
+            else:
+                nivel = "MUY ALTO RIESGO"
+                nivel_color = UAX_RED
+                accion_msg = "Cliente muy difícil de recuperar (TR 10%). Contacto prioritario con bono 20€."
 
             # Gauge Plotly
             fig_gauge = go.Figure(go.Indicator(
@@ -1257,6 +1479,42 @@ with tab6:
                     <div class="info-box-text">{accion_msg}</div>
                 </div>
                 """, unsafe_allow_html=True)
+
+            # ── Contextual scatter — portfolio positioning ─────
+            section_line()
+            st.markdown("### Posición en la Cartera")
+            RIESGO_COLORS = {
+                'MUY_BAJO': UAX_GREEN,
+                'BAJO':     '#80D080',
+                'MEDIO':    UAX_GOLD,
+                'ALTO':     UAX_RED,
+                'MUY_ALTO': '#FF4444',
+            }
+            fig_scatter = go.Figure()
+            for seg in ['MUY_BAJO', 'BAJO', 'MEDIO', 'ALTO', 'MUY_ALTO']:
+                sub = df[df['riesgo'] == seg]
+                fig_scatter.add_trace(go.Scatter(
+                    x=sub['p_churn'], y=sub['PVP_original'],
+                    mode='markers',
+                    name=seg,
+                    marker=dict(size=6, color=RIESGO_COLORS[seg], opacity=0.55),
+                ))
+            fig_scatter.add_trace(go.Scatter(
+                x=[prob], y=[pvp_input],
+                mode='markers',
+                name='Este cliente',
+                marker=dict(size=16, color='#FFFFFF', symbol='star',
+                            line=dict(color=UAX_GOLD, width=2)),
+                showlegend=True,
+            ))
+            fig_scatter.update_layout(
+                xaxis_title="P(Churn)",
+                yaxis_title="PVP (€)",
+                xaxis=dict(tickformat='.0%'),
+                yaxis=dict(tickformat=",.0f"),
+            )
+            plotly_layout(fig_scatter, height=400)
+            st.plotly_chart(fig_scatter, width='stretch')
 
         else:
             st.error("Error al ejecutar la predicción. Verifica que el pipeline sea compatible con los campos introducidos.")

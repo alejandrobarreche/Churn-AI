@@ -1,5 +1,5 @@
 # Plan de Implementación — Mejoras de ruru a los notebooks modulares
-**Última actualización:** 2026-03-14
+**Última actualización:** 2026-03-16
 
 ---
 
@@ -75,6 +75,42 @@ Al inicio de cada nueva sesión, indicar:
   - En `transformer.py`: cambiar `BinaryEncoder` para que mapee `Churn_Final` (ya llega como 0/1, solo pasar sin transformar) en lugar de `Churn_400`
   - Re-ejecutar: NB2 → NB3 → NB4
   - **Advertencia:** es el cambio de mayor impacto. Hacer tras I4 en la misma sesión de re-ejecución.
+
+---
+
+---
+
+## Fase 4 — Mejoras en `5-cltv_acciones.ipynb` + `app.py` desde ruru
+
+- [x] **A1** — Ampliar segmentación de riesgo: 3 → 5 grupos ✓ (2026-03-16)
+  - Archivos: `5-cltv_acciones.ipynb` + `app.py`
+  - Cambio: `pd.qcut(q=3, ['Bajo','Medio','Alto'])` → `pd.qcut(q=5, ['MUY_BAJO','BAJO','MEDIO','ALTO','MUY_ALTO'])`
+  - Actualizada tabla de reglas y función `asignar_accion` para manejar 5 niveles
+  - En `app.py`: sidebar filter, heatmap ordering y clasificación individual actualizados
+
+- [x] **A2** — Añadir tasa de respuesta (TR) por segmento ✓ (2026-03-16)
+  - Archivos: `5-cltv_acciones.ipynb` + `app.py`
+  - `TASA_RESPUESTA`: MUY_ALTO=10%, ALTO=80%, MEDIO=55%, BAJO=45%, MUY_BAJO=40%
+  - Ganancia CLTV y coste del servicio ponderados por TR (solo respondedores se benefician)
+  - `COSTE_CONTACTO` (email/SMS) aplicado al 100% de clientes
+
+- [x] **A3** — Reemplazar descuentos genéricos por paquetes de servicio concretos ✓ (2026-03-16)
+  - Archivos: `5-cltv_acciones.ipynb` + `app.py`
+  - Pack Premium VIP (ALTO): recogida(35) + lavado(30) + neumáticos(35) + bono(50) = 150€/respondedor
+  - Pack Intermedio (MEDIO): regalo(6) + lavado(30) + bono(30) = 66€/respondedor
+  - Contacto prioritario (MUY_ALTO): bono 20€/respondedor
+  - `REDUCCION_CHURN` actualizado: VIP=−40%, Intermedio=−20%, Prioritario=−15%
+
+- [x] **A4** — Pack de fidelización por 5 revisiones ✓ (2026-03-16)
+  - Archivo: `5-cltv_acciones.ipynb` (sección 8.1)
+  - Elegibles: BAJO/MUY_BAJO riesgo + Alto valor
+  - −10% sobre acumulado 5 revisiones + bono 1.000€ para 2º vehículo
+  - Tabla de rentabilidad por modelo (algunos modelos de gama baja no cubren el bono)
+
+- [x] **A5** — Desglosar costes en 4 componentes ✓ (2026-03-16)
+  - Archivos: `5-cltv_acciones.ipynb` + `app.py`
+  - `Coste_Contacto` (100% clientes) + `Coste_Adicional` (TR%) + `Coste_Descuento` (TR%) + `Coste_Marketing` 1% rev1 (TR%)
+  - CSV exportado incluye los 4 componentes por cliente
 
 ---
 
